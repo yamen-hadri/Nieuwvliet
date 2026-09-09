@@ -752,13 +752,14 @@ async function exportExcel(){
   ws.getCell("A2").border = { bottom:{ style:"medium" } };
   ws.getRow(2).height = 31.5;
 
+  ws.getCell(3, 1).font = { name:"Aptos Narrow", size:11, bold:false };
+  ws.getCell(3, 1).border = { bottom:{ style:"thin" } };
   for (let i=1;i<=14;i++){
     const cell = ws.getCell(3, i+1);
     cell.value = headers[i];
     cell.font = { name:"Aptos Narrow", size:11, bold:true };
     cell.border = { bottom:{ style:"thin" } };
   }
-  ws.getRow(3).height = 18;
 
   const displayRows = [];
   rows.forEach((r, idx) => {
@@ -791,15 +792,14 @@ async function exportExcel(){
       cc.value = values[c] === undefined ? null : values[c];
       cc.font = { name:"Aptos Narrow", size:11, bold: c===1 };
       cc.border = { bottom:{ style:"thin" } };
-      if (c===1) cc.alignment = { horizontal:"center" };
-      else if (c>=5 && c<=7) cc.alignment = { horizontal:"center" };
-      else cc.alignment = { horizontal:"left" };
+      if (c>=5 && c<=7) cc.alignment = { horizontal:"center" };
+      else if (c!==1) cc.alignment = { horizontal:"left" };
       if (c===4) cc.numFmt = "dd-mm-yyyy";
-      if (c>=5 && c<=7 && cc.value) cc.numFmt = "hh:mm";
+      if (c>=5 && c<=7 && cc.value) cc.numFmt = "h:mm;@";
     }
   });
 
-  const baseWidths = {1:6,2:12.14,3:13.86,4:11.71,5:12,6:15.14,7:17.71,8:15.71,9:14.43,10:18,11:20.14,12:15.86,13:15.14,14:22.14,15:36.86};
+  const baseWidths = {1:8.43,2:12.14,3:13.86,4:11.71,5:12,6:15.14,7:17.71,8:15.71,9:14.43,10:18,11:20.14,12:15.86,13:15.14,14:22.14,15:36.86};
   for (let col=1; col<=15; col++){
     let maxLen = String(headers[col-1] || "").length;
     displayRows.forEach(dr => {
