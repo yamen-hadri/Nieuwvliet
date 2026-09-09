@@ -431,6 +431,7 @@ const IMPORT_TARGET_FIELDS = [
   { key: "bsn", label: "BSN-nummer" },
   { key: "geldig_van", label: "Geldig van" },
   { key: "geldig_tot", label: "Geldig tot" },
+  { key: "geldig_range", label: "— أو: عمود واحد فيه المدة كاملة (من تاريخ - إلى تاريخ) —" },
   { key: "kopie_id", label: "Kopie ID aangeleverd (Ja/Nee)" },
   { key: "twv_kopie", label: "TWV kopie (Ja/Nee/N.v.t.)" },
 ];
@@ -443,7 +444,8 @@ const IMPORT_GUESS_PATTERNS = {
   documentnummer: /document|paspoort.?(nr|nummer)|id.?(nr|nummer)/i,
   bsn: /bsn/i,
   geldig_van: /geldig.*van|start|begin/i,
-  geldig_tot: /geldig.*tot|geldigheid|verval|expir/i,
+  geldig_tot: /geldig.*tot|verval|expir/i,
+  geldig_range: /^geldig(heid)?$|verblijf|iqama|residency/i,
   kopie_id: /kopie.?id|id.?kopie/i,
   twv_kopie: /twv/i,
 };
@@ -571,6 +573,18 @@ function importToISODate(v){
   return null;
 }
 
+function splitGeldigRange(v){
+  if (v == null) return { van: null, tot: null };
+  if (v instanceof Date){ const iso = v.toISOString().slice(0,10); return { van: iso, tot: iso }; }
+  const s = String(v).trim();
+  const tokens = s.match(/\d{1,2}[-\/]\d{1,2}[-\/]\d{2,4}/g) || [];
+  if (!tokens.length) return { van: null, tot: null };
+  return {
+    van: importToISODate(tokens[0]),
+    tot: importToISODate(tokens[tokens.length - 1]),
+  };
+}
+
 function importToJaNee(v, allowNvt){
   const s = String(v || "").trim().toLowerCase();
   if (!s) return "ja";
@@ -594,14 +608,21 @@ function buildImportRow(vals, mapping){
   if (!voornaam && !achternaam) return null;
   if (!voornaam && achternaam){ voornaam = achternaam; achternaam = ""; }
 
+  let geldig_van = importToISODate(importGet(vals, mapping, "geldig_van"));
+  let geldig_tot = importToISODate(importGet(vals, mapping, "geldig_tot"));
+  if ((!geldig_van || !geldig_tot) && mapping.geldig_range >= 0){
+    const range = splitGeldigRange(importGet(vals, mapping, "geldig_range"));
+    geldig_van = geldig_van || range.van;
+    geldig_tot = geldig_tot || range.tot;
+  }
+
   return {
     voornaam, achternaam,
     nationaliteit: importGet(vals, mapping, "nationaliteit"),
     type_legitimatie: importGet(vals, mapping, "type_legitimatie"),
     documentnummer: importGet(vals, mapping, "documentnummer"),
     bsn: importGet(vals, mapping, "bsn"),
-    geldig_van: importToISODate(importGet(vals, mapping, "geldig_van")),
-    geldig_tot: importToISODate(importGet(vals, mapping, "geldig_tot")),
+    geldig_van, geldig_tot,
     kopie_id: importToJaNee(importGet(vals, mapping, "kopie_id"), false),
     twv_kopie: importToJaNee(importGet(vals, mapping, "twv_kopie"), true),
   };
