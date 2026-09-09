@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Inschrijflijst Nieuwvliet</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- ============ شاشة تسجيل الدخول ============ -->
+  <div id="loginScreen" class="login-wrap">
+    <form id="loginForm" class="login-card">
+      <h1>Inschrijflijst Nieuwvliet 🪪</h1>
+      <p>سجّل دخولك لمتابعة بنك بيانات العمّال ولائحة النزلة اليومية.</p>
+      <div class="field">
+        <label class="ltr">Email</label>
+        <input type="email" id="loginEmail" class="ltr" required autocomplete="username">
+      </div>
+      <div class="field">
+        <label class="ltr">Password</label>
+        <input type="password" id="loginPassword" class="ltr" required autocomplete="current-password">
+      </div>
+      <button type="submit" class="btn btn-primary" style="width:100%;">دخول (Inloggen)</button>
+      <div class="login-error" id="loginError"></div>
+    </form>
+  </div>
+
+  <!-- ============ التطبيق الأساسي ============ -->
+  <div id="appScreen" class="shell" hidden>
+
+    <div class="topbar">
+      <div class="brand">
+        <div class="brand-mark">🪪</div>
+        <div class="brand-text">
+          <h1>قائمة تسجيل الحضور — Nieuwvliet</h1>
+          <p>بنك بيانات العمّال + لائحة النزلة اليومية</p>
+        </div>
+      </div>
+      <div class="topbar-right">
+        <span class="sync-pill"><span class="sync-dot" id="syncDot"></span><span id="syncLabel">جاري الاتصال...</span></span>
+        <span class="userchip ltr" id="userChip"></span>
+        <button type="button" class="logout-btn" id="logoutBtn">خروج (Uitloggen)</button>
+      </div>
+    </div>
+
+    <div class="stats">
+      <div class="chip">عدد العمّال: <b id="statTotal">0</b></div>
+      <div class="chip warn" id="statSoon" hidden>هويات قاربت الانتهاء: <b id="statSoonNum">0</b></div>
+      <div class="chip bad" id="statExpired" hidden>هويات منتهية: <b id="statExpiredNum">0</b></div>
+      <div class="chip">في لائحة اليوم: <b id="statCompose">0</b></div>
+    </div>
+
+    <div class="banner" id="expiryBanner" hidden>
+      <div class="dot"></div>
+      <div>
+        <h3>تنبيه: هويات تحتاج متابعة</h3>
+        <ul id="expiryBannerList"></ul>
+      </div>
+    </div>
+
+    <!-- DATABASE PANEL -->
+    <section class="panel">
+      <div class="panel-head">
+        <div>
+          <h2>بنك بيانات العمّال</h2>
+          <p class="sub">المعلومات الثابتة لكل عامل — محفوظة على قاعدة بياناتك الخاصة، تتزامن فوراً بين كل الأجهزة.</p>
+        </div>
+        <button class="btn btn-primary" id="btnOpenAdd">+ عامل جديد</button>
+      </div>
+
+      <div class="field" style="max-width:320px;">
+        <label for="dbSearch">بحث في القائمة</label>
+        <input type="text" id="dbSearch" placeholder="اسم، جنسية، رقم وثيقة...">
+      </div>
+
+      <div id="workerFormWrap" class="worker-form" hidden>
+        <h3 id="workerFormTitle">عامل جديد</h3>
+        <div class="grid">
+          <div class="field">
+            <label for="fVoornaam">Voornaam *</label>
+            <input type="text" id="fVoornaam" class="ltr">
+          </div>
+          <div class="field">
+            <label for="fAchternaam">Achternaam *</label>
+            <input type="text" id="fAchternaam" class="ltr">
+          </div>
+          <div class="field">
+            <label for="fNationaliteit">Nationaliteit</label>
+            <input type="text" id="fNationaliteit" list="nationaliteitList" class="ltr">
+            <datalist id="nationaliteitList">
+              <option value="Nederland"><option value="Syrië"><option value="Marokko">
+              <option value="Polen"><option value="Roemenië"><option value="Bulgarije">
+              <option value="Turkije"><option value="Eritrea"><option value="Afghanistan">
+              <option value="Irak"><option value="Oekraïne">
+            </datalist>
+          </div>
+          <div class="field">
+            <label for="fTypeLegitimatie">Type Legitimatie</label>
+            <input type="text" id="fTypeLegitimatie" list="legitimatieList" class="ltr">
+            <datalist id="legitimatieList">
+              <option value="Paspoort"><option value="ID-kaart"><option value="Rijbewijs">
+              <option value="Vreemdelingen ID"><option value="Verblijfsvergunning">
+            </datalist>
+          </div>
+          <div class="field">
+            <label for="fDocumentnummer">Documentnummer</label>
+            <input type="text" id="fDocumentnummer" class="mono ltr">
+          </div>
+          <div class="field">
+            <label for="fBsn">BSN-nummer</label>
+            <input type="text" id="fBsn" class="mono ltr">
+          </div>
+          <div class="field">
+            <label for="fGeldigVan">Geldig van</label>
+            <input type="date" id="fGeldigVan" class="ltr">
+          </div>
+          <div class="field">
+            <label for="fGeldigTot">Geldig tot</label>
+            <input type="date" id="fGeldigTot" class="ltr">
+          </div>
+          <div class="field">
+            <label for="fKopieId">Kopie ID aangeleverd</label>
+            <select id="fKopieId"><option value="ja">Ja</option><option value="nee">Nee</option></select>
+          </div>
+          <div class="field">
+            <label for="fTwvKopie">TWV kopie aangeleverd indien vereist</label>
+            <select id="fTwvKopie"><option value="ja">Ja</option><option value="nee">Nee</option><option value="nvt">N.v.t. (EU)</option></select>
+          </div>
+        </div>
+        <div class="btnrow">
+          <button class="btn btn-primary" id="btnSaveWorker">حفظ</button>
+          <button class="btn btn-ghost" id="btnCancelWorker">إلغاء</button>
+        </div>
+      </div>
+
+      <div class="table-wrap" style="margin-top:14px;">
+        <table>
+          <thead>
+            <tr>
+              <th>Naam</th><th>Nationaliteit</th><th>Type Legitimatie</th>
+              <th>Documentnummer</th><th>Geldig tot</th><th>BSN-nummer</th><th>Kopie ID</th><th>TWV kopie</th><th></th>
+            </tr>
+          </thead>
+          <tbody id="workersTbody"></tbody>
+        </table>
+      </div>
+      <div class="empty-state" id="workersEmpty" hidden>لا يوجد عمّال بعد — أضف أول عامل من الزر أعلاه.</div>
+    </section>
+
+    <!-- COMPOSE PANEL -->
+    <section class="panel">
+      <div class="panel-head">
+        <div>
+          <h2>تجهيز لائحة النزلة</h2>
+          <p class="sub">اختر العمّال النازلين اليوم، حدّد Ctr أو Lin، ثم صدّر ملف الإكسل.</p>
+        </div>
+      </div>
+
+      <div class="defaults-row">
+        <div class="field">
+          <label for="expDate">تاريخ النزلة (Datum)</label>
+          <input type="date" id="expDate" class="ltr">
+        </div>
+        <div class="field">
+          <label for="defStart">وقت البدء <span style="font-weight:400;">(اختياري)</span></label>
+          <input type="time" id="defStart" class="ltr">
+        </div>
+        <div class="field">
+          <label for="defPause">الاستراحة <span style="font-weight:400;">(اختياري)</span></label>
+          <input type="time" id="defPause" class="ltr">
+        </div>
+        <div class="field">
+          <label for="defEnd">وقت الانتهاء <span style="font-weight:400;">(اختياري)</span></label>
+          <input type="time" id="defEnd" class="ltr">
+        </div>
+      </div>
+      <p class="search-hint" style="margin:-6px 0 14px;">اتركها فاضية إذا بدك تصدّر الجدول بأوقات فاضية (Starttijd/Pauze/Eindtijd) تُعبّى يدوياً لاحقاً.</p>
+
+      <div class="compose-columns">
+        <div class="search-box">
+          <label for="composeSearch">🔍 ابحث بالاسم لإضافته</label>
+          <input type="text" id="composeSearch" placeholder="اكتب اسم العامل...">
+          <div class="tag-choices">
+            <label><input type="radio" name="tagChoice" value="" checked> بدون وسم</label>
+            <label><input type="radio" name="tagChoice" value="Ctr"> Ctr</label>
+            <label><input type="radio" name="tagChoice" value="Lin"> Lin</label>
+          </div>
+          <ul class="search-results" id="composeResults" tabindex="0"></ul>
+          <p class="search-hint">Enter لإضافة أول نتيجة، أو اضغط على أي اسم بالقائمة.</p>
+        </div>
+
+        <div>
+          <div class="table-wrap">
+            <table class="compose-table">
+              <thead>
+                <tr><th>#</th><th>Naam</th><th>Starttijd</th><th>Pauze</th><th>Eindtijd</th><th>Tag</th><th></th></tr>
+              </thead>
+              <tbody id="composeTbody"></tbody>
+            </table>
+          </div>
+          <div class="empty-state" id="composeEmpty">لم تتم إضافة أحد بعد.</div>
+          <div class="btnrow">
+            <button class="btn btn-primary" id="btnExport">تصدير ملف Excel</button>
+            <button class="btn btn-ghost" id="btnClearCompose">تفريغ اللائحة</button>
+          </div>
+          <footer class="hint">سيتم فرز الأسماء أبجدياً تلقائياً عند التصدير، بدون أي أسطر فارغة زائدة.</footer>
+        </div>
+      </div>
+    </section>
+
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
