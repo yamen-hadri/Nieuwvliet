@@ -577,18 +577,28 @@ function importToISODate(v){
   if (m){
     let [, d, mo, y] = m;
     if (y.length === 2) y = (+y < 50 ? "20" : "19") + y;
+    const dn = +d, mn = +mo;
+    if (mn < 1 || mn > 12 || dn < 1 || dn > 31) return null;
     return y + "-" + mo.padStart(2, "0") + "-" + d.padStart(2, "0");
   }
   m = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(s);
-  if (m) return s;
+  if (m){
+    const mn = +m[2], dn = +m[3];
+    if (mn < 1 || mn > 12 || dn < 1 || dn > 31) return null;
+    return s;
+  }
   return null;
+}
+
+function extractDateTokens(s){
+  const re = /(?<!\d)(?:\d{1,2}[-\/]\d{1,2}[-\/]\d{2,4}|\d{4}-\d{1,2}-\d{1,2})(?!\d)/g;
+  return String(s || "").match(re) || [];
 }
 
 function splitGeldigRange(v){
   if (v == null) return { van: null, tot: null };
   if (v instanceof Date){ const iso = v.toISOString().slice(0,10); return { van: iso, tot: iso }; }
-  const s = String(v).trim();
-  const tokens = s.match(/\d{1,2}[-\/]\d{1,2}[-\/]\d{2,4}/g) || [];
+  const tokens = extractDateTokens(v);
   if (!tokens.length) return { van: null, tot: null };
   return {
     van: importToISODate(tokens[0]),
@@ -619,13 +629,19 @@ function buildImportRow(vals, mapping){
   if (!voornaam && !achternaam) return null;
   if (!voornaam && achternaam){ voornaam = achternaam; achternaam = ""; }
 
-  let geldig_van = importToISODate(importGet(vals, mapping, "geldig_van"));
-  let geldig_tot = importToISODate(importGet(vals, mapping, "geldig_tot"));
+  const rawVan = importGet(vals, mapping, "geldig_van");
+  const rawTot = importGet(vals, mapping, "geldig_tot");
+  const rawRange = mapping.geldig_range >= 0 ? importGet(vals, mapping, "geldig_range") : "";
+  let geldig_van = importToISODate(rawVan);
+  let geldig_tot = importToISODate(rawTot);
   if ((!geldig_van || !geldig_tot) && mapping.geldig_range >= 0){
-    const range = splitGeldigRange(importGet(vals, mapping, "geldig_range"));
+    const range = splitGeldigRange(rawRange);
     geldig_van = geldig_van || range.van;
     geldig_tot = geldig_tot || range.tot;
   }
+  const dateIssue = (!!String(rawVan||"").trim() && !geldig_van) ||
+                     (!!String(rawTot||"").trim() && !geldig_tot) ||
+                     (!!String(rawRange||"").trim() && (!geldig_van || !geldig_tot));
 
   return {
     voornaam, achternaam,
@@ -636,6 +652,7 @@ function buildImportRow(vals, mapping){
     geldig_van, geldig_tot,
     kopie_id: importToJaNee(importGet(vals, mapping, "kopie_id"), false),
     twv_kopie: importToJaNee(importGet(vals, mapping, "twv_kopie"), true),
+    _dateIssue: dateIssue,
   };
 }
 
@@ -648,8 +665,9 @@ function renderImportPreview(){
     return;
   }
   body.innerHTML = preview.map(w => {
-    const flag = (hasArabic(w.voornaam) || hasArabic(w.achternaam) || hasArabic(w.nationaliteit) || hasArabic(w.type_legitimatie) || hasArabic(w.documentnummer) || hasArabic(w.bsn))
+    let flag = (hasArabic(w.voornaam) || hasArabic(w.achternaam) || hasArabic(w.nationaliteit) || hasArabic(w.type_legitimatie) || hasArabic(w.documentnummer) || hasArabic(w.bsn))
       ? " <span class=\"badge expired\">فيه عربي</span>" : "";
+    if (w._dateIssue) flag += " <span class=\"badge soon\">تاريخ إقامة غير مفهوم</span>";
     return "<tr>" +
       "<td class=\"ltr name-cell\">" + escapeHtml(fullName(w)) + flag + "</td>" +
       "<td class=\"ltr\">" + escapeHtml(w.nationaliteit || "—") + "</td>" +
@@ -670,6 +688,7 @@ async function runImport(){
 
   const toInsert = [];
   const arabicNames = [];
+  const dateIssueNames = [];
   let skippedEmpty = 0;
 
   importState.rows.forEach(vals => {
@@ -679,7 +698,9 @@ async function runImport(){
         hasArabic(w.type_legitimatie) || hasArabic(w.documentnummer) || hasArabic(w.bsn)){
       arabicNames.push(fullName(w));
     }
-    toInsert.push(w);
+    if (w._dateIssue) dateIssueNames.push(fullName(w));
+    const { _dateIssue, ...record } = w;
+    toInsert.push(record);
   });
 
   if (!toInsert.length){ toast("ما في أي سطر صالح للاستيراد."); return; }
@@ -705,6 +726,7 @@ async function runImport(){
   let msg = "تم استيراد " + inserted + " عامل بنجاح.";
   if (skippedEmpty) msg += " تجاهلنا " + skippedEmpty + " سطر فارغ.";
   if (arabicNames.length) msg += " تنبيه: " + arabicNames.length + " عامل فيهم نص عربي (" + arabicNames.slice(0,4).join("، ") + (arabicNames.length>4?"...":"") + ") — راجعهم من زر تعديل قبل التصدير.";
+  if (dateIssueNames.length) msg += " تنبيه: ما قدرنا نقرأ تاريخ إقامة " + dateIssueNames.length + " عامل (" + dateIssueNames.slice(0,4).join("، ") + (dateIssueNames.length>4?"...":"") + ") — راجعهم وصحح التاريخ يدوياً.";
   toast(msg);
 }
 
