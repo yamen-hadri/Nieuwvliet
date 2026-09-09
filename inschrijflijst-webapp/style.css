@@ -81,19 +81,15 @@ button:focus-visible, input:focus-visible, select:focus-visible{outline:2px soli
 .chip.warn{background:var(--warning-soft); color:var(--warning); border-color:transparent;}
 .chip.bad{background:var(--danger-soft); color:var(--danger); border-color:transparent;}
 
-.banner{display:flex; gap:12px; align-items:flex-start; padding:14px 18px; border-radius:12px; margin-bottom:16px;}
-.banner .dot{width:9px; height:9px; border-radius:50%; margin-top:6px; flex:none;}
-.banner h3{margin:0 0 6px; font-size:14px;}
-.banner ul{margin:0; padding-inline-start:18px; font-size:12.5px; line-height:1.8;}
-.banner.danger{background:var(--danger-soft); border:1px solid var(--danger);}
-.banner.danger h3{color:var(--danger);}
-.banner.danger .dot{background:var(--danger);}
-.banner.warn{background:var(--warning-soft); border:1px solid var(--warning);}
-.banner.warn h3{color:var(--warning);}
-.banner.warn .dot{background:var(--warning);}
-.banner .tag{display:inline-block; font-size:11px; padding:1px 8px; border-radius:999px; margin-inline-start:6px; font-weight:700;}
-.banner .tag.expired{background:var(--danger); color:#fff;}
-.banner .tag.soon{background:var(--warning); color:#241a02;}
+#btnAlerts{display:flex; align-items:center; gap:8px;}
+
+.alert-danger{color:var(--danger);}
+.alert-warn{color:var(--warning);}
+
+.modal-backdrop{position:fixed; inset:0; background:rgba(0,0,0,.45); display:flex; align-items:center; justify-content:center; padding:20px; z-index:80;}
+.modal{width:100%; max-width:520px; max-height:82vh; overflow-y:auto; background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:22px;}
+.modal h3{margin:0 0 4px; font-size:15px;}
+.modal ul{margin:0; padding-inline-start:18px; font-size:13px; line-height:1.9;}
 
 /* ---- panels ---- */
 .panel{background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:18px 20px; margin-bottom:16px;}
@@ -140,6 +136,13 @@ td.name-cell{font-weight:600;}
 .badge.soon{background:var(--warning-soft); color:var(--warning);}
 .badge.expired{background:var(--danger-soft); color:var(--danger);}
 .badge.none{background:var(--surface-alt); color:var(--text-muted);}
+
+#importMappingList table{width:100%;}
+#importMappingList td{padding:8px 6px;}
+#importMappingList select{
+  width:100%; padding:7px 9px; border-radius:7px; border:1px solid var(--border);
+  background:var(--bg); color:var(--text); font-size:12.5px;
+}
 
 /* ---- compose ---- */
 .compose-columns{display:grid; grid-template-columns:minmax(240px,320px) 1fr; gap:22px;}

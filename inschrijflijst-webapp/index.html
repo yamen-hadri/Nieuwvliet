@@ -47,25 +47,8 @@
 
     <div class="stats">
       <div class="chip">عدد العمّال: <b id="statTotal">0</b></div>
-      <div class="chip warn" id="statSoon" hidden>هويات قاربت الانتهاء: <b id="statSoonNum">0</b></div>
-      <div class="chip bad" id="statExpired" hidden>هويات منتهية: <b id="statExpiredNum">0</b></div>
       <div class="chip">في لائحة اليوم: <b id="statCompose">0</b></div>
-    </div>
-
-    <div class="banner danger" id="expiryBanner" hidden>
-      <div class="dot"></div>
-      <div>
-        <h3>تنبيه: هويات تحتاج متابعة</h3>
-        <ul id="expiryBannerList"></ul>
-      </div>
-    </div>
-
-    <div class="banner warn" id="missingBsnBanner" hidden>
-      <div class="dot"></div>
-      <div>
-        <h3>تنبيه: عمّال بدون رقم BSN مربوط بمعلوماتهم</h3>
-        <ul id="missingBsnList"></ul>
-      </div>
+      <button type="button" class="btn btn-ghost" id="btnAlerts">تنبيهات <span class="badge none" id="alertsBadge">0</span></button>
     </div>
 
     <!-- DATABASE PANEL -->

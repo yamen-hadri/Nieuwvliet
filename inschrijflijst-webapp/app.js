@@ -48,7 +48,7 @@ function fmtDateDisplay(iso){
   if (!iso) return "—";
   const p = iso.split("-");
   if (p.length !== 3) return iso;
-  return p[2] + "-" + p[1] + "-" + p[0];
+  return p[2] + "/" + p[1] + "/" + p[0];
 }
 function labelJaNee(v){ return v === "ja" ? "Ja" : "Nee"; }
 function labelJaNeeNvt(v){ return v === "ja" ? "Ja" : (v === "nee" ? "Nee" : "N.v.t."); }
@@ -151,12 +151,11 @@ async function deleteWorkerRecord(id){
   await loadWorkers();
 }
 
-/* ---------------- rendering: stats + banner ---------------- */
+/* ---------------- rendering: stats + alerts ---------------- */
 
 function onWorkersChanged(){
   renderStats();
-  renderExpiryBanner();
-  renderMissingBsnBanner();
+  updateAlertsButton();
   renderWorkersTable();
   renderComposeSearch();
 }
@@ -164,41 +163,53 @@ function onWorkersChanged(){
 function renderStats(){
   $("statTotal").textContent = workers.length;
   $("statCompose").textContent = composeList.length;
-  const soon = workers.filter(w => expiryStatus(w) === "soon").length;
-  const expired = workers.filter(w => expiryStatus(w) === "expired").length;
-  $("statSoon").hidden = soon === 0;
-  $("statSoonNum").textContent = soon;
-  $("statExpired").hidden = expired === 0;
-  $("statExpiredNum").textContent = expired;
 }
 
-function renderExpiryBanner(){
-  const flagged = workers.filter(w => {
-    const s = expiryStatus(w);
-    return s === "expired" || s === "soon";
-  }).sort((a,b) => daysUntil(a.geldig_tot) - daysUntil(b.geldig_tot));
-
-  const banner = $("expiryBanner");
-  if (!flagged.length){ banner.hidden = true; return; }
-  banner.hidden = false;
-  $("expiryBannerList").innerHTML = flagged.map(w => {
-    const s = expiryStatus(w);
-    const d = daysUntil(w.geldig_tot);
-    const tagCls = s === "expired" ? "expired" : "soon";
-    const tagTxt = s === "expired" ? ("منتهية منذ " + Math.abs(d) + " يوم") : ("متبقٍ " + d + " يوم");
-    return "<li>" + escapeHtml(fullName(w)) + " — صالحة حتى " + escapeHtml(fmtDateDisplay(w.geldig_tot)) +
-           "<span class=\"tag " + tagCls + "\">" + tagTxt + "</span></li>";
-  }).join("");
+function computeAlerts(){
+  const byExpiry = (a,b) => (daysUntil(a.geldig_tot) ?? 0) - (daysUntil(b.geldig_tot) ?? 0);
+  const byName = (a,b) => sortKey(a).localeCompare(sortKey(b), "nl");
+  return {
+    expired: workers.filter(w => expiryStatus(w) === "expired").sort(byExpiry),
+    soon: workers.filter(w => expiryStatus(w) === "soon").sort(byExpiry),
+    missingBsn: workers.filter(w => !w.bsn || !String(w.bsn).trim()).sort(byName),
+  };
 }
 
-function renderMissingBsnBanner(){
-  const missing = workers.filter(w => !w.bsn || !String(w.bsn).trim())
-    .sort((a,b) => sortKey(a).localeCompare(sortKey(b), "nl"));
+function updateAlertsButton(){
+  const { expired, soon, missingBsn } = computeAlerts();
+  const total = expired.length + soon.length + missingBsn.length;
+  const badge = $("alertsBadge");
+  badge.textContent = total;
+  badge.className = "badge " + (expired.length ? "expired" : (soon.length || missingBsn.length ? "soon" : "none"));
+}
 
-  const banner = $("missingBsnBanner");
-  if (!missing.length){ banner.hidden = true; return; }
-  banner.hidden = false;
-  $("missingBsnList").innerHTML = missing.map(w => "<li>" + escapeHtml(fullName(w)) + "</li>").join("");
+function openAlertsModal(){
+  const { expired, soon, missingBsn } = computeAlerts();
+  if (!expired.length && !soon.length && !missingBsn.length){
+    toast("ما في أي تنبيهات حالياً — كلشي تمام.");
+    return;
+  }
+
+  function section(title, cls, list, detail){
+    if (!list.length) return "";
+    return "<h3 class=\"" + cls + "\">" + title + " (" + list.length + ")</h3><ul>" +
+      list.map(w => "<li>" + escapeHtml(fullName(w)) + (detail ? " — " + escapeHtml(detail(w)) : "") + "</li>").join("") +
+      "</ul>";
+  }
+
+  const backdrop = document.createElement("div");
+  backdrop.className = "modal-backdrop";
+  backdrop.innerHTML = "<div class=\"modal\">" +
+    "<h3>التنبيهات</h3>" +
+    "<p class=\"sub\" style=\"margin:0 0 4px;\">هويات منتهية أو قاربت الانتهاء، وعمّال بدون رقم BSN.</p>" +
+    section("هويات منتهية", "alert-danger", expired, w => "منتهية منذ " + Math.abs(daysUntil(w.geldig_tot)) + " يوم (كانت سارية حتى " + fmtDateDisplay(w.geldig_tot) + ")") +
+    section("هويات قاربت الانتهاء (خلال 30 يوم)", "alert-warn", soon, w => "متبقٍ " + daysUntil(w.geldig_tot) + " يوم (حتى " + fmtDateDisplay(w.geldig_tot) + ")") +
+    section("بدون رقم BSN", "alert-warn", missingBsn) +
+    "<div class=\"btnrow\"><button type=\"button\" class=\"btn btn-ghost\" id=\"btnCloseAlerts\">إغلاق</button></div>" +
+  "</div>";
+  document.body.appendChild(backdrop);
+  backdrop.addEventListener("mousedown", (e) => { if (e.target === backdrop) backdrop.remove(); });
+  backdrop.querySelector("#btnCloseAlerts").addEventListener("click", () => backdrop.remove());
 }
 
 /* ---------------- database table ---------------- */
@@ -838,6 +849,8 @@ function wireEvents(){
   $("btnOpenAdd").addEventListener("click", () => openWorkerForm(null));
   $("btnCancelWorker").addEventListener("click", closeWorkerForm);
   $("btnSaveWorker").addEventListener("click", saveWorkerForm);
+
+  $("btnAlerts").addEventListener("click", openAlertsModal);
 
   $("btnOpenImport").addEventListener("click", openImportPanel);
   $("btnParseImport").addEventListener("click", parseImportFile);
