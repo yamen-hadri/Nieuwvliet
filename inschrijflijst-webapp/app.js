@@ -9,6 +9,7 @@
 const sb = window.supabase.createClient(APP_CONFIG.SUPABASE_URL, APP_CONFIG.SUPABASE_ANON_KEY);
 
 const LS_COMPOSE = "nieuwvliet_compose_v1";
+const LS_WORKERS_COLLAPSED = "nieuwvliet_workers_collapsed_v1";
 
 let workers = [];
 let composeList = [];
@@ -863,10 +864,26 @@ async function exportExcel(){
   }
 }
 
+/* ---------------- collapsible workers panel ---------------- */
+
+function setWorkersCollapsed(collapsed){
+  $("workersPanelBody").hidden = collapsed;
+  $("btnToggleWorkers").textContent = collapsed ? "▸" : "▾";
+  $("btnToggleWorkers").setAttribute("aria-expanded", collapsed ? "false" : "true");
+  try { localStorage.setItem(LS_WORKERS_COLLAPSED, collapsed ? "1" : "0"); } catch(e){}
+}
+
 /* ---------------- wiring ---------------- */
 
 function wireEvents(){
   $("dbSearch").addEventListener("input", renderWorkersTable);
+
+  $("btnToggleWorkers").addEventListener("click", () => {
+    setWorkersCollapsed(!$("workersPanelBody").hidden);
+  });
+  let startCollapsed = false;
+  try { startCollapsed = localStorage.getItem(LS_WORKERS_COLLAPSED) === "1"; } catch(e){}
+  setWorkersCollapsed(startCollapsed);
 
   $("btnOpenAdd").addEventListener("click", () => openWorkerForm(null));
   $("btnCancelWorker").addEventListener("click", closeWorkerForm);

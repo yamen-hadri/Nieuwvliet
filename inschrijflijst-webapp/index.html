@@ -54,15 +54,20 @@
     <!-- DATABASE PANEL -->
     <section class="panel">
       <div class="panel-head">
-        <div>
-          <h2>بنك بيانات العمّال</h2>
-          <p class="sub">المعلومات الثابتة لكل عامل — محفوظة على قاعدة بياناتك الخاصة، تتزامن فوراً بين كل الأجهزة.</p>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <button type="button" class="collapse-toggle" id="btnToggleWorkers" aria-expanded="true" aria-label="طي/فرد القائمة">▾</button>
+          <div>
+            <h2>بنك بيانات العمّال</h2>
+            <p class="sub">المعلومات الثابتة لكل عامل — محفوظة على قاعدة بياناتك الخاصة، تتزامن فوراً بين كل الأجهزة.</p>
+          </div>
         </div>
         <div style="display:flex; gap:8px; flex-wrap:wrap;">
           <button class="btn btn-ghost" id="btnOpenImport">استيراد من ملف Excel</button>
           <button class="btn btn-primary" id="btnOpenAdd">+ عامل جديد</button>
         </div>
       </div>
+
+      <div id="workersPanelBody">
 
       <div class="field" style="max-width:320px;">
         <label for="dbSearch">بحث في القائمة</label>
@@ -170,7 +175,7 @@
         </div>
       </div>
 
-      <div class="table-wrap" style="margin-top:14px;">
+      <div class="table-wrap scroll-list" style="margin-top:14px;">
         <table>
           <thead>
             <tr>
@@ -182,6 +187,8 @@
         </table>
       </div>
       <div class="empty-state" id="workersEmpty" hidden>لا يوجد عمّال بعد — أضف أول عامل من الزر أعلاه.</div>
+
+      </div>
     </section>
 
     <!-- COMPOSE PANEL -->
