@@ -138,15 +138,26 @@ button:focus-visible, input:focus-visible, select:focus-visible{outline:2px soli
 
 /* ---- database / compose tables ---- */
 .table-wrap{overflow-x:auto; border:1px solid var(--border); border-radius:10px; background:var(--surface);}
-table{border-collapse:collapse; width:100%; font-size:12.8px;}
-thead th{position:sticky; top:0; background:var(--surface-alt); color:var(--text-muted); font-weight:600; font-size:11.5px; letter-spacing:.02em; padding:9px 10px; border-bottom:1px solid var(--border); white-space:nowrap; text-align:right;}
-tbody td{padding:9px 10px; border-bottom:1px solid var(--border); white-space:nowrap; color:var(--text); vertical-align:middle;}
+table{border-collapse:collapse; width:100%; font-size:12.3px;}
+thead th{position:sticky; top:0; background:var(--surface-alt); color:var(--text-muted); font-weight:600; font-size:11px; letter-spacing:.02em; padding:8px 8px; border-bottom:1px solid var(--border); white-space:nowrap; text-align:right;}
+tbody td{padding:7px 8px; border-bottom:1px solid var(--border); white-space:nowrap; color:var(--text); vertical-align:middle;}
 tbody tr:last-child td{border-bottom:none;}
 tbody tr:hover{background:var(--surface-alt);}
 tbody tr.expired td:first-child{box-shadow:inset 3px 0 0 var(--danger);}
 tbody tr.soon td:first-child{box-shadow:inset 3px 0 0 var(--warning);}
 td.name-cell{font-weight:600;}
-.row-actions{display:flex; gap:6px;}
+.row-actions{display:flex; gap:5px;}
+
+.truncate{overflow:hidden; text-overflow:ellipsis;}
+.col-name{max-width:170px;}
+.col-nat{max-width:100px;}
+.col-type{max-width:130px;}
+.col-doc{max-width:100px;}
+.col-bsn{max-width:90px;}
+
+.status-dot{display:inline-block; width:7px; height:7px; border-radius:50%; margin-inline-start:5px; vertical-align:middle;}
+.status-dot.expired{background:var(--danger);}
+.status-dot.soon{background:var(--warning);}
 .empty-state{padding:26px 10px; text-align:center; color:var(--text-muted); font-size:13px;}
 
 .badge{display:inline-block; padding:2px 9px; border-radius:999px; font-size:11px; font-weight:700;}

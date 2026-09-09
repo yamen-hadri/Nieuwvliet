@@ -235,17 +235,20 @@ function renderWorkersTable(){
   tbody.innerHTML = list.map(w => {
     const status = expiryStatus(w);
     const rowCls = status === "expired" ? "expired" : (status === "soon" ? "soon" : "");
-    const badge = status === "none" ? "<span class=\"badge none\">—</span>" :
-                  status === "ok" ? "<span class=\"badge ok\">سارية</span>" :
-                  status === "soon" ? "<span class=\"badge soon\">قاربت الانتهاء</span>" :
-                  "<span class=\"badge expired\">منتهية</span>";
+    const dot = status === "expired" ? "<span class=\"status-dot expired\" title=\"منتهية\"></span>" :
+                status === "soon" ? "<span class=\"status-dot soon\" title=\"قاربت الانتهاء\"></span>" : "";
+    const nat = w.nationaliteit || "—";
+    const type = w.type_legitimatie || "—";
+    const doc = w.documentnummer || "—";
+    const bsn = w.bsn || "—";
+    const name = fullName(w);
     return "<tr class=\"" + rowCls + "\">" +
-      "<td class=\"ltr name-cell\">" + escapeHtml(fullName(w)) + "</td>" +
-      "<td class=\"ltr\">" + escapeHtml(w.nationaliteit || "—") + "</td>" +
-      "<td class=\"ltr\">" + escapeHtml(w.type_legitimatie || "—") + "</td>" +
-      "<td class=\"mono\">" + escapeHtml(w.documentnummer || "—") + "</td>" +
-      "<td class=\"mono\">" + escapeHtml(fmtDateDisplay(w.geldig_tot)) + " " + badge + "</td>" +
-      "<td class=\"mono\">" + escapeHtml(w.bsn || "—") + "</td>" +
+      "<td class=\"ltr name-cell truncate col-name\" title=\"" + escapeHtml(name) + "\">" + escapeHtml(name) + "</td>" +
+      "<td class=\"ltr truncate col-nat\" title=\"" + escapeHtml(nat) + "\">" + escapeHtml(nat) + "</td>" +
+      "<td class=\"ltr truncate col-type\" title=\"" + escapeHtml(type) + "\">" + escapeHtml(type) + "</td>" +
+      "<td class=\"mono truncate col-doc\" title=\"" + escapeHtml(doc) + "\">" + escapeHtml(doc) + "</td>" +
+      "<td class=\"mono\">" + escapeHtml(fmtDateDisplay(w.geldig_tot)) + dot + "</td>" +
+      "<td class=\"mono truncate col-bsn\" title=\"" + escapeHtml(bsn) + "\">" + escapeHtml(bsn) + "</td>" +
       "<td class=\"ltr\">" + escapeHtml(labelJaNee(w.kopie_id)) + "</td>" +
       "<td class=\"ltr\">" + escapeHtml(labelJaNeeNvt(w.twv_kopie)) + "</td>" +
       "<td class=\"row-actions\">" +
