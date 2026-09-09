@@ -52,8 +52,13 @@ function fmtDateDisplay(iso){
 }
 function labelJaNee(v){ return v === "ja" ? "Ja" : "Nee"; }
 function labelJaNeeNvt(v){ return v === "ja" ? "Ja" : (v === "nee" ? "Nee" : "N.v.t."); }
-function fullName(w){ return (w.voornaam || "") + " " + (w.achternaam || ""); }
-function sortKey(w){ return ((w.achternaam || "") + " " + (w.voornaam || "")).toLocaleLowerCase("nl"); }
+function fullName(w){ return [(w.voornaam||"").trim(), (w.achternaam||"").trim()].filter(Boolean).join(" "); }
+function sortKey(w){ return [(w.achternaam||"").trim(), (w.voornaam||"").trim()].filter(Boolean).join(" ").toLocaleLowerCase("nl"); }
+function tagSuffixFor(base, tag){
+  base = (base || "").trim();
+  if (!tag) return base;
+  return base ? (base + " (" + tag + ")") : ("(" + tag + ")");
+}
 
 let toastTimer = null;
 function toast(msg){
@@ -151,6 +156,7 @@ async function deleteWorkerRecord(id){
 function onWorkersChanged(){
   renderStats();
   renderExpiryBanner();
+  renderMissingBsnBanner();
   renderWorkersTable();
   renderComposeSearch();
 }
@@ -185,6 +191,16 @@ function renderExpiryBanner(){
   }).join("");
 }
 
+function renderMissingBsnBanner(){
+  const missing = workers.filter(w => !w.bsn || !String(w.bsn).trim())
+    .sort((a,b) => sortKey(a).localeCompare(sortKey(b), "nl"));
+
+  const banner = $("missingBsnBanner");
+  if (!missing.length){ banner.hidden = true; return; }
+  banner.hidden = false;
+  $("missingBsnList").innerHTML = missing.map(w => "<li>" + escapeHtml(fullName(w)) + "</li>").join("");
+}
+
 /* ---------------- database table ---------------- */
 
 function filteredWorkers(){
@@ -212,7 +228,7 @@ function renderWorkersTable(){
                   status === "soon" ? "<span class=\"badge soon\">قاربت الانتهاء</span>" :
                   "<span class=\"badge expired\">منتهية</span>";
     return "<tr class=\"" + rowCls + "\">" +
-      "<td class=\"ltr name-cell\">" + escapeHtml((w.voornaam||"") + " " + (w.achternaam||"")) + "</td>" +
+      "<td class=\"ltr name-cell\">" + escapeHtml(fullName(w)) + "</td>" +
       "<td class=\"ltr\">" + escapeHtml(w.nationaliteit || "—") + "</td>" +
       "<td class=\"ltr\">" + escapeHtml(w.type_legitimatie || "—") + "</td>" +
       "<td class=\"mono\">" + escapeHtml(w.documentnummer || "—") + "</td>" +
@@ -254,8 +270,8 @@ function closeWorkerForm(){
 async function saveWorkerForm(){
   const voornaam = $("fVoornaam").value.trim();
   const achternaam = $("fAchternaam").value.trim();
-  if (!voornaam || !achternaam){
-    toast("الاسم الأول والكنية إلزاميان.");
+  if (!voornaam){
+    toast("الاسم الأول (Voornaam) إلزامي على الأقل.");
     return;
   }
   const data = {
@@ -375,11 +391,7 @@ function addWorkerToCompose(workerId){
 /* ---------------- compose table ---------------- */
 
 function sortedCompose(){
-  return composeList.slice().sort((a,b) => {
-    const ak = ((a.achternaam||"") + " " + (a.voornaam||"")).toLocaleLowerCase("nl");
-    const bk = ((b.achternaam||"") + " " + (b.voornaam||"")).toLocaleLowerCase("nl");
-    return ak.localeCompare(bk, "nl");
-  });
+  return composeList.slice().sort((a,b) => sortKey(a).localeCompare(sortKey(b), "nl"));
 }
 
 function renderCompose(){
@@ -390,7 +402,7 @@ function renderCompose(){
   tbody.innerHTML = rows.map((r, idx) => {
     return "<tr>" +
       "<td class=\"mono\">" + (idx+1) + "</td>" +
-      "<td class=\"name-cell ltr\">" + escapeHtml(r.voornaam + " " + r.achternaam) + "</td>" +
+      "<td class=\"name-cell ltr\">" + escapeHtml(fullName(r)) + "</td>" +
       "<td><input type=\"time\" data-row=\"" + r.rowId + "\" data-field=\"starttijd\" value=\"" + escapeHtml(r.starttijd) + "\"></td>" +
       "<td><input type=\"time\" data-row=\"" + r.rowId + "\" data-field=\"pauze\" value=\"" + escapeHtml(r.pauze) + "\"></td>" +
       "<td><input type=\"time\" data-row=\"" + r.rowId + "\" data-field=\"eindtijd\" value=\"" + escapeHtml(r.eindtijd) + "\"></td>" +
@@ -576,12 +588,11 @@ function buildImportRow(vals, mapping){
     if (full){
       const parts = full.split(/\s+/);
       voornaam = voornaam || parts[0] || "";
-      achternaam = achternaam || parts.slice(1).join(" ") || parts[0] || "";
+      achternaam = achternaam || parts.slice(1).join(" ");
     }
   }
   if (!voornaam && !achternaam) return null;
-  if (!achternaam) achternaam = voornaam;
-  if (!voornaam) voornaam = achternaam;
+  if (!voornaam && achternaam){ voornaam = achternaam; achternaam = ""; }
 
   return {
     voornaam, achternaam,
@@ -608,7 +619,7 @@ function renderImportPreview(){
     const flag = (hasArabic(w.voornaam) || hasArabic(w.achternaam) || hasArabic(w.nationaliteit) || hasArabic(w.type_legitimatie) || hasArabic(w.documentnummer) || hasArabic(w.bsn))
       ? " <span class=\"badge expired\">فيه عربي</span>" : "";
     return "<tr>" +
-      "<td class=\"ltr name-cell\">" + escapeHtml(w.voornaam + " " + w.achternaam) + flag + "</td>" +
+      "<td class=\"ltr name-cell\">" + escapeHtml(fullName(w)) + flag + "</td>" +
       "<td class=\"ltr\">" + escapeHtml(w.nationaliteit || "—") + "</td>" +
       "<td class=\"ltr\">" + escapeHtml(w.type_legitimatie || "—") + "</td>" +
       "<td class=\"mono\">" + escapeHtml(w.documentnummer || "—") + "</td>" +
@@ -731,11 +742,10 @@ async function exportExcel(){
   const displayRows = [];
   rows.forEach((r, idx) => {
     const rn = 4 + idx;
-    const tagSuffix = r.tag ? (" (" + r.tag + ")") : "";
     const values = {
       1: idx+1,
       2: r.voornaam || "",
-      3: (r.achternaam || "") + tagSuffix,
+      3: tagSuffixFor(r.achternaam, r.tag),
       4: new Date(dp.y, dp.m-1, dp.d),
       5: r.starttijd ? timeToDate(r.starttijd) : null,
       6: r.pauze ? timeToDate(r.pauze) : null,
@@ -749,7 +759,7 @@ async function exportExcel(){
       14: labelJaNee(r.kopie_id),
       15: labelJaNeeNvt(r.twv_kopie),
     };
-    const display = [idx+1, r.voornaam||"", (r.achternaam||"")+tagSuffix, dateDisplay, r.starttijd, r.pauze, r.eindtijd,
+    const display = [idx+1, r.voornaam||"", tagSuffixFor(r.achternaam, r.tag), dateDisplay, r.starttijd, r.pauze, r.eindtijd,
                      "", r.nationaliteit||"", r.type_legitimatie||"", r.documentnummer||"",
                      geldigRangeText(r.geldig_van,r.geldig_tot), r.bsn||"", labelJaNee(r.kopie_id), labelJaNeeNvt(r.twv_kopie)];
     displayRows.push(display);

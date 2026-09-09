@@ -9,7 +9,7 @@ create extension if not exists pgcrypto;
 create table if not exists workers (
   id uuid primary key default gen_random_uuid(),
   voornaam text not null,
-  achternaam text not null,
+  achternaam text not null default '',
   nationaliteit text not null default '',
   type_legitimatie text not null default '',
   documentnummer text not null default '',
@@ -22,6 +22,11 @@ create table if not exists workers (
 );
 
 create index if not exists workers_achternaam_idx on workers (achternaam);
+
+-- إذا كنت شغّلت هالملف قبل ما تصير الكنية اختيارية، هالسطر بيسمحلها تكون فاضية
+-- (آمن تشغّله أكتر من مرة، ما بيأثر عالبيانات الموجودة):
+alter table workers alter column achternaam drop not null;
+alter table workers alter column achternaam set default '';
 
 -- ============================================================
 -- الأمان: بس المستخدمين المسجلين (اللي عملتلهم حساب إنت) يقدروا

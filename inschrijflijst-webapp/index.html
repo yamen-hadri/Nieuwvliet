@@ -52,11 +52,19 @@
       <div class="chip">في لائحة اليوم: <b id="statCompose">0</b></div>
     </div>
 
-    <div class="banner" id="expiryBanner" hidden>
+    <div class="banner danger" id="expiryBanner" hidden>
       <div class="dot"></div>
       <div>
         <h3>تنبيه: هويات تحتاج متابعة</h3>
         <ul id="expiryBannerList"></ul>
+      </div>
+    </div>
+
+    <div class="banner warn" id="missingBsnBanner" hidden>
+      <div class="dot"></div>
+      <div>
+        <h3>تنبيه: عمّال بدون رقم BSN مربوط بمعلوماتهم</h3>
+        <ul id="missingBsnList"></ul>
       </div>
     </div>
 
@@ -127,7 +135,7 @@
             <input type="text" id="fVoornaam" class="ltr">
           </div>
           <div class="field">
-            <label for="fAchternaam">Achternaam *</label>
+            <label for="fAchternaam">Achternaam <span style="font-weight:400;">(اختياري — في عمّال بدون كنية)</span></label>
             <input type="text" id="fAchternaam" class="ltr">
           </div>
           <div class="field">
