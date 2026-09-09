@@ -67,12 +67,56 @@
           <h2>بنك بيانات العمّال</h2>
           <p class="sub">المعلومات الثابتة لكل عامل — محفوظة على قاعدة بياناتك الخاصة، تتزامن فوراً بين كل الأجهزة.</p>
         </div>
-        <button class="btn btn-primary" id="btnOpenAdd">+ عامل جديد</button>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button class="btn btn-ghost" id="btnOpenImport">استيراد من ملف Excel</button>
+          <button class="btn btn-primary" id="btnOpenAdd">+ عامل جديد</button>
+        </div>
       </div>
 
       <div class="field" style="max-width:320px;">
         <label for="dbSearch">بحث في القائمة</label>
         <input type="text" id="dbSearch" placeholder="اسم، جنسية، رقم وثيقة...">
+      </div>
+
+      <div id="importPanelWrap" class="worker-form" hidden>
+        <h3>استيراد عمّال من ملف Excel</h3>
+        <p class="sub" style="margin:0 0 12px;">ارفع ملفك متل ما هو (لازم يكون بصيغة <span class="mono">.xlsx</span> —
+          إذا عندك ملف <span class="mono">.xls</span> قديم، افتحه بإكسل واحفظه Save As بصيغة xlsx أولاً).
+          بعد ما ترفعه، فيك تربط كل عمود عندك بالحقل المناسب.</p>
+
+        <div class="grid" style="margin-bottom:10px;">
+          <div class="field">
+            <label for="importFile">ملف الإكسل</label>
+            <input type="file" id="importFile" accept=".xlsx">
+          </div>
+          <div class="field" style="max-width:220px;">
+            <label for="importHeaderRow">رقم السطر يلي فيه أسماء الأعمدة</label>
+            <input type="number" id="importHeaderRow" value="1" min="1" class="mono">
+          </div>
+        </div>
+        <div class="btnrow" style="margin-top:0;">
+          <button class="btn btn-ghost" id="btnParseImport">تحليل الملف</button>
+        </div>
+
+        <div id="importMappingArea" hidden style="margin-top:18px;">
+          <h3 style="font-size:13px;">اربط كل حقل بالعمود المناسب من ملفك</h3>
+          <div id="importMappingList" class="table-wrap" style="padding:4px 14px;"></div>
+
+          <h3 style="font-size:13px; margin-top:18px;">معاينة (أول 5 أسطر)</h3>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th>Naam</th><th>Nationaliteit</th><th>Type Legitimatie</th><th>Documentnummer</th><th>BSN</th><th>Geldig van-tot</th></tr>
+              </thead>
+              <tbody id="importPreviewBody"></tbody>
+            </table>
+          </div>
+
+          <div class="btnrow">
+            <button class="btn btn-primary" id="btnRunImport">استيراد الآن</button>
+            <button class="btn btn-ghost" id="btnCancelImport">إلغاء</button>
+          </div>
+        </div>
       </div>
 
       <div id="workerFormWrap" class="worker-form" hidden>

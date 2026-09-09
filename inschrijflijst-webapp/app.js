@@ -15,6 +15,7 @@ let composeList = [];
 let editingId = null;
 let highlightIndex = 0;
 let pendingDelete = null;
+let importState = { headers: [], rows: [] };
 
 /* ---------------- helpers ---------------- */
 
@@ -406,6 +407,264 @@ function renderCompose(){
   renderComposeSearch();
 }
 
+/* ---------------- import from Excel ---------------- */
+
+const IMPORT_TARGET_FIELDS = [
+  { key: "voornaam", label: "Voornaam" },
+  { key: "achternaam", label: "Achternaam" },
+  { key: "full_name", label: "— أو: عمود اسم كامل واحد (ينقسم تلقائياً) —" },
+  { key: "nationaliteit", label: "Nationaliteit" },
+  { key: "type_legitimatie", label: "Type Legitimatie" },
+  { key: "documentnummer", label: "Documentnummer" },
+  { key: "bsn", label: "BSN-nummer" },
+  { key: "geldig_van", label: "Geldig van" },
+  { key: "geldig_tot", label: "Geldig tot" },
+  { key: "kopie_id", label: "Kopie ID aangeleverd (Ja/Nee)" },
+  { key: "twv_kopie", label: "TWV kopie (Ja/Nee/N.v.t.)" },
+];
+const IMPORT_GUESS_PATTERNS = {
+  voornaam: /voornaam|first.?name/i,
+  achternaam: /achternaam|last.?name|surname/i,
+  full_name: /^naam$|full.?name|volledige naam/i,
+  nationaliteit: /national/i,
+  type_legitimatie: /legitimatie|type.?id/i,
+  documentnummer: /document|paspoort.?(nr|nummer)|id.?(nr|nummer)/i,
+  bsn: /bsn/i,
+  geldig_van: /geldig.*van|start|begin/i,
+  geldig_tot: /geldig.*tot|geldigheid|verval|expir/i,
+  kopie_id: /kopie.?id|id.?kopie/i,
+  twv_kopie: /twv/i,
+};
+
+function openImportPanel(){
+  $("importPanelWrap").hidden = false;
+  $("importMappingArea").hidden = true;
+  $("importFile").value = "";
+  $("btnRunImport").disabled = false;
+  $("btnRunImport").textContent = "استيراد الآن";
+}
+function closeImportPanel(){
+  $("importPanelWrap").hidden = true;
+  importState = { headers: [], rows: [] };
+}
+
+async function parseImportFile(){
+  const file = $("importFile").files[0];
+  if (!file){ toast("اختر ملف Excel أولاً."); return; }
+  if (typeof ExcelJS === "undefined"){ toast("تعذّر تحميل مكتبة قراءة الإكسل، أعد تحميل الصفحة."); return; }
+
+  const headerRowNum = parseInt($("importHeaderRow").value, 10) || 1;
+  try {
+    const buf = await file.arrayBuffer();
+    const wb = new ExcelJS.Workbook();
+    await wb.xlsx.load(buf);
+    const ws = wb.worksheets[0];
+    if (!ws){ toast("ما لقيت ولا صفحة (sheet) بالملف."); return; }
+
+    const headerRow = ws.getRow(headerRowNum);
+    const headers = [];
+    headerRow.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+      const v = cell.value;
+      headers[colNumber - 1] = v == null ? "" : (v.text || v.richText ? cellTextOf(v) : String(v)).trim();
+    });
+    while (headers.length && !headers[headers.length - 1]) headers.pop();
+    if (!headers.length){ toast("ما لقيت أعمدة بالسطر رقم " + headerRowNum + " — جرب رقم سطر تاني."); return; }
+
+    const rows = [];
+    for (let r = headerRowNum + 1; r <= ws.rowCount; r++){
+      const row = ws.getRow(r);
+      const vals = [];
+      let hasAny = false;
+      for (let c = 1; c <= headers.length; c++){
+        let v = row.getCell(c).value;
+        if (v && typeof v === "object" && !(v instanceof Date)) v = cellTextOf(v);
+        if (v !== null && v !== undefined && String(v).trim() !== "") hasAny = true;
+        vals[c - 1] = v;
+      }
+      if (hasAny) rows.push(vals);
+    }
+    if (!rows.length){ toast("ما لقيت أي بيانات تحت سطر الأعمدة."); return; }
+
+    importState = { headers, rows };
+    renderImportMapping();
+    renderImportPreview();
+    $("importMappingArea").hidden = false;
+    toast("تم تحليل الملف — لقيت " + rows.length + " سطر. اربط الأعمدة وبعدين اضغط استيراد.");
+  } catch(e){
+    console.error(e);
+    toast("تعذّر قراءة الملف: " + (e && e.message ? e.message : "تأكد إنه بصيغة xlsx صحيحة"));
+  }
+}
+
+function cellTextOf(v){
+  if (v == null) return "";
+  if (v.richText) return v.richText.map(p => p.text).join("");
+  if (v.text != null) return String(v.text);
+  if (v.result != null) return String(v.result);
+  return String(v);
+}
+
+function guessColumnIndex(key){
+  const pattern = IMPORT_GUESS_PATTERNS[key];
+  if (!pattern) return -1;
+  return importState.headers.findIndex(h => pattern.test(h || ""));
+}
+
+function renderImportMapping(){
+  const wrap = $("importMappingList");
+  wrap.innerHTML = "<table><tbody>" + IMPORT_TARGET_FIELDS.map(f => {
+    const guess = guessColumnIndex(f.key);
+    const options = ["<option value=\"-1\">— تجاهل —</option>"].concat(
+      importState.headers.map((h, i) => "<option value=\"" + i + "\"" + (i === guess ? " selected" : "") + ">" + escapeHtml(h || ("عمود " + (i+1))) + "</option>")
+    ).join("");
+    return "<tr><td style=\"font-weight:600; white-space:nowrap;\" class=\"ltr\">" + escapeHtml(f.label) + "</td>" +
+      "<td><select data-map=\"" + f.key + "\" style=\"width:100%;\">" + options + "</select></td></tr>";
+  }).join("") + "</tbody></table>";
+
+  wrap.querySelectorAll("select[data-map]").forEach(sel => {
+    sel.addEventListener("change", renderImportPreview);
+  });
+}
+
+function currentImportMapping(){
+  const mapping = {};
+  IMPORT_TARGET_FIELDS.forEach(f => {
+    const sel = document.querySelector('#importMappingList select[data-map="' + f.key + '"]');
+    mapping[f.key] = sel ? parseInt(sel.value, 10) : -1;
+  });
+  return mapping;
+}
+
+function importGet(vals, mapping, key){
+  const idx = mapping[key];
+  if (idx == null || idx < 0) return "";
+  const v = vals[idx];
+  if (v == null) return "";
+  if (v instanceof Date) return v;
+  return String(v).trim();
+}
+
+function importToISODate(v){
+  if (!v) return null;
+  if (v instanceof Date) return v.toISOString().slice(0, 10);
+  const s = String(v).trim();
+  let m = /^(\d{1,2})[-\/](\d{1,2})[-\/](\d{2,4})$/.exec(s);
+  if (m){
+    let [, d, mo, y] = m;
+    if (y.length === 2) y = (+y < 50 ? "20" : "19") + y;
+    return y + "-" + mo.padStart(2, "0") + "-" + d.padStart(2, "0");
+  }
+  m = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(s);
+  if (m) return s;
+  return null;
+}
+
+function importToJaNee(v, allowNvt){
+  const s = String(v || "").trim().toLowerCase();
+  if (!s) return "ja";
+  if (/^(ja|yes|y|true|1|x)$/.test(s)) return "ja";
+  if (/^(nee|no|n|false|0)$/.test(s)) return "nee";
+  if (allowNvt && /nvt|n\.v\.t|eu/.test(s)) return "nvt";
+  return "ja";
+}
+
+function buildImportRow(vals, mapping){
+  let voornaam = importGet(vals, mapping, "voornaam");
+  let achternaam = importGet(vals, mapping, "achternaam");
+  if ((!voornaam || !achternaam) && mapping.full_name >= 0){
+    const full = String(importGet(vals, mapping, "full_name") || "").trim();
+    if (full){
+      const parts = full.split(/\s+/);
+      voornaam = voornaam || parts[0] || "";
+      achternaam = achternaam || parts.slice(1).join(" ") || parts[0] || "";
+    }
+  }
+  if (!voornaam && !achternaam) return null;
+  if (!achternaam) achternaam = voornaam;
+  if (!voornaam) voornaam = achternaam;
+
+  return {
+    voornaam, achternaam,
+    nationaliteit: importGet(vals, mapping, "nationaliteit"),
+    type_legitimatie: importGet(vals, mapping, "type_legitimatie"),
+    documentnummer: importGet(vals, mapping, "documentnummer"),
+    bsn: importGet(vals, mapping, "bsn"),
+    geldig_van: importToISODate(importGet(vals, mapping, "geldig_van")),
+    geldig_tot: importToISODate(importGet(vals, mapping, "geldig_tot")),
+    kopie_id: importToJaNee(importGet(vals, mapping, "kopie_id"), false),
+    twv_kopie: importToJaNee(importGet(vals, mapping, "twv_kopie"), true),
+  };
+}
+
+function renderImportPreview(){
+  const mapping = currentImportMapping();
+  const body = $("importPreviewBody");
+  const preview = importState.rows.slice(0, 5).map(vals => buildImportRow(vals, mapping)).filter(Boolean);
+  if (!preview.length){
+    body.innerHTML = "<tr><td colspan=\"6\" class=\"empty-state\">حدد عمود الاسم أولاً لتظهر المعاينة.</td></tr>";
+    return;
+  }
+  body.innerHTML = preview.map(w => {
+    const flag = (hasArabic(w.voornaam) || hasArabic(w.achternaam) || hasArabic(w.nationaliteit) || hasArabic(w.type_legitimatie) || hasArabic(w.documentnummer) || hasArabic(w.bsn))
+      ? " <span class=\"badge expired\">فيه عربي</span>" : "";
+    return "<tr>" +
+      "<td class=\"ltr name-cell\">" + escapeHtml(w.voornaam + " " + w.achternaam) + flag + "</td>" +
+      "<td class=\"ltr\">" + escapeHtml(w.nationaliteit || "—") + "</td>" +
+      "<td class=\"ltr\">" + escapeHtml(w.type_legitimatie || "—") + "</td>" +
+      "<td class=\"mono\">" + escapeHtml(w.documentnummer || "—") + "</td>" +
+      "<td class=\"mono\">" + escapeHtml(w.bsn || "—") + "</td>" +
+      "<td class=\"mono\">" + escapeHtml(geldigRangeText(w.geldig_van, w.geldig_tot) || "—") + "</td>" +
+    "</tr>";
+  }).join("");
+}
+
+async function runImport(){
+  const mapping = currentImportMapping();
+  if (mapping.voornaam < 0 && mapping.achternaam < 0 && mapping.full_name < 0){
+    toast("لازم تحدد عمود الاسم (Voornaam/Achternaam أو الاسم الكامل) قبل الاستيراد.");
+    return;
+  }
+
+  const toInsert = [];
+  const arabicNames = [];
+  let skippedEmpty = 0;
+
+  importState.rows.forEach(vals => {
+    const w = buildImportRow(vals, mapping);
+    if (!w){ skippedEmpty++; return; }
+    if (hasArabic(w.voornaam) || hasArabic(w.achternaam) || hasArabic(w.nationaliteit) ||
+        hasArabic(w.type_legitimatie) || hasArabic(w.documentnummer) || hasArabic(w.bsn)){
+      arabicNames.push(fullName(w));
+    }
+    toInsert.push(w);
+  });
+
+  if (!toInsert.length){ toast("ما في أي سطر صالح للاستيراد."); return; }
+
+  $("btnRunImport").disabled = true;
+  $("btnRunImport").textContent = "جاري الاستيراد...";
+  const CHUNK = 200;
+  let inserted = 0;
+  for (let i = 0; i < toInsert.length; i += CHUNK){
+    const chunk = toInsert.slice(i, i + CHUNK);
+    const { error } = await sb.from("workers").insert(chunk);
+    if (error){
+      await loadWorkers();
+      closeImportPanel();
+      toast("توقف الاستيراد بسبب خطأ بعد " + inserted + " عامل: " + error.message);
+      return;
+    }
+    inserted += chunk.length;
+  }
+
+  await loadWorkers();
+  closeImportPanel();
+  let msg = "تم استيراد " + inserted + " عامل بنجاح.";
+  if (skippedEmpty) msg += " تجاهلنا " + skippedEmpty + " سطر فارغ.";
+  if (arabicNames.length) msg += " تنبيه: " + arabicNames.length + " عامل فيهم نص عربي (" + arabicNames.slice(0,4).join("، ") + (arabicNames.length>4?"...":"") + ") — راجعهم من زر تعديل قبل التصدير.";
+  toast(msg);
+}
+
 /* ---------------- export ---------------- */
 
 function parseISODateParts(iso){
@@ -548,6 +807,11 @@ function wireEvents(){
   $("btnOpenAdd").addEventListener("click", () => openWorkerForm(null));
   $("btnCancelWorker").addEventListener("click", closeWorkerForm);
   $("btnSaveWorker").addEventListener("click", saveWorkerForm);
+
+  $("btnOpenImport").addEventListener("click", openImportPanel);
+  $("btnParseImport").addEventListener("click", parseImportFile);
+  $("btnRunImport").addEventListener("click", runImport);
+  $("btnCancelImport").addEventListener("click", closeImportPanel);
 
   $("workersTbody").addEventListener("click", (e) => {
     const editId = e.target.getAttribute("data-edit");
