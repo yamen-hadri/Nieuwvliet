@@ -55,10 +55,12 @@ function labelJaNee(v){ return v === "ja" ? "Ja" : "Nee"; }
 function labelJaNeeNvt(v){ return v === "ja" ? "Ja" : (v === "nee" ? "Nee" : "N.v.t."); }
 function fullName(w){ return [(w.voornaam||"").trim(), (w.achternaam||"").trim()].filter(Boolean).join(" "); }
 function sortKey(w){ return [(w.achternaam||"").trim(), (w.voornaam||"").trim()].filter(Boolean).join(" ").toLocaleLowerCase("nl"); }
-function tagSuffixFor(base, tag){
-  base = (base || "").trim();
-  if (!tag) return base;
-  return base ? (base + " (" + tag + ")") : ("(" + tag + ")");
+function applyTagToName(voornaam, achternaam, tag){
+  voornaam = (voornaam || "").trim();
+  achternaam = (achternaam || "").trim();
+  if (!tag) return { voornaam, achternaam };
+  if (achternaam) return { voornaam, achternaam: achternaam + " (" + tag + ")" };
+  return { voornaam: voornaam + " (" + tag + ")", achternaam: "" };
 }
 
 let toastTimer = null;
@@ -742,7 +744,7 @@ function parseISODateParts(iso){
 }
 function timeToDate(hhmm){
   const p = (hhmm||"00:00").split(":");
-  return new Date(1970,0,1, +p[0]||0, +p[1]||0, 0);
+  return new Date(Date.UTC(1970,0,1, +p[0]||0, +p[1]||0, 0));
 }
 function geldigRangeText(van, tot){
   if (!van && !tot) return "";
@@ -785,6 +787,7 @@ async function exportExcel(){
     c.value = pair[1];
     c.font = { name:"Aptos Narrow", size:14, bold:true };
     c.alignment = { horizontal:"center", vertical:"middle" };
+    c.fill = { type:"pattern", pattern:"solid", fgColor:{ argb:"FFB4E5A2" } };
   });
   ws.getCell("A2").border = { bottom:{ style:"medium" } };
   ws.getRow(2).height = 31.5;
@@ -801,11 +804,12 @@ async function exportExcel(){
   const displayRows = [];
   rows.forEach((r, idx) => {
     const rn = 4 + idx;
+    const tagged = applyTagToName(r.voornaam, r.achternaam, r.tag);
     const values = {
       1: idx+1,
-      2: r.voornaam || "",
-      3: tagSuffixFor(r.achternaam, r.tag),
-      4: new Date(dp.y, dp.m-1, dp.d),
+      2: tagged.voornaam,
+      3: tagged.achternaam,
+      4: new Date(Date.UTC(dp.y, dp.m-1, dp.d)),
       5: r.starttijd ? timeToDate(r.starttijd) : null,
       6: r.pauze ? timeToDate(r.pauze) : null,
       7: r.eindtijd ? timeToDate(r.eindtijd) : null,
@@ -818,7 +822,7 @@ async function exportExcel(){
       14: labelJaNee(r.kopie_id),
       15: labelJaNeeNvt(r.twv_kopie),
     };
-    const display = [idx+1, r.voornaam||"", tagSuffixFor(r.achternaam, r.tag), dateDisplay, r.starttijd, r.pauze, r.eindtijd,
+    const display = [idx+1, tagged.voornaam, tagged.achternaam, dateDisplay, r.starttijd, r.pauze, r.eindtijd,
                      "", r.nationaliteit||"", r.type_legitimatie||"", r.documentnummer||"",
                      geldigRangeText(r.geldig_van,r.geldig_tot), r.bsn||"", labelJaNee(r.kopie_id), labelJaNeeNvt(r.twv_kopie)];
     displayRows.push(display);
