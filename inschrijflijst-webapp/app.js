@@ -816,7 +816,7 @@ async function exportExcel(){
     cell.border = {
       bottom: { style:"thin" },
       left: c===1 ? { style:"medium" } : { style:"thin" },
-      right: c===15 ? undefined : { style:"thin" },
+      right: c===15 ? { style:"medium" } : { style:"thin" },
     };
   }
 
@@ -855,9 +855,9 @@ async function exportExcel(){
       cc.font = { name:"Aptos Narrow", size:11, bold: c===1 };
       cc.border = {
         top: { style:"thin" },
-        bottom: isLastRow ? (c===1 ? { style:"medium" } : undefined) : { style:"thin" },
-        left: c===1 ? { style:"medium" } : { style:"thin" },
-        right: c===15 ? undefined : { style:"thin" },
+        bottom: { style: isLastRow ? "medium" : "thin" },
+        left: { style: c===1 ? "medium" : "thin" },
+        right: { style: c===15 ? "medium" : "thin" },
       };
       if (c>=5 && c<=7) cc.alignment = { horizontal:"center" };
       else if (c!==1) cc.alignment = { horizontal:"left" };
