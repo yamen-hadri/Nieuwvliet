@@ -54,7 +54,7 @@ function fmtDateDisplay(iso){
 function labelJaNee(v){ return v === "ja" ? "Ja" : "Nee"; }
 function labelJaNeeNvt(v){ return v === "ja" ? "Ja" : (v === "nee" ? "Nee" : "N.v.t."); }
 function fullName(w){ return [(w.voornaam||"").trim(), (w.achternaam||"").trim()].filter(Boolean).join(" "); }
-function sortKey(w){ return [(w.achternaam||"").trim(), (w.voornaam||"").trim()].filter(Boolean).join(" ").toLocaleLowerCase("nl"); }
+function sortKey(w){ return [(w.voornaam||"").trim(), (w.achternaam||"").trim()].filter(Boolean).join(" ").toLocaleLowerCase("nl"); }
 function applyTagToName(voornaam, achternaam, tag){
   voornaam = (voornaam || "").trim();
   achternaam = (achternaam || "").trim();
@@ -781,29 +781,55 @@ async function exportExcel(){
 
   ws.getRow(1).height = 15.75;
 
-  ws.mergeCells("A2:C2"); ws.mergeCells("D2:H2"); ws.mergeCells("I2:M2"); ws.mergeCells("N2:O2");
-  [["A2","NAAM"],["D2","WERKTIJD"],["I2","IDENTIFICATIE"],["N2","INDIEN GEEN EUR"]].forEach(pair => {
-    const c = ws.getCell(pair[0]);
-    c.value = pair[1];
-    c.font = { name:"Aptos Narrow", size:14, bold:true };
-    c.alignment = { horizontal:"center", vertical:"middle" };
-    c.fill = { type:"pattern", pattern:"solid", fgColor:{ argb:"FFB4E5A2" } };
-  });
-  ws.getCell("A2").border = { bottom:{ style:"medium" } };
+  // NOTE: these four header groups are NOT real merged cells. ExcelJS shares one
+  // underlying style object across every cell inside an actual merge, which silently
+  // clobbers the distinct left/right edge borders each group needs (verified: setting
+  // different borders on two cells of the same merge, whichever is written last wins
+  // for the whole range). "centerContinuous" alignment gives the identical visual
+  // (text centered across the blank cells that follow it) without that shared-style bug.
+  const groups = [
+    { name:"NAAM", start:1, end:3 },
+    { name:"WERKTIJD", start:4, end:8 },
+    { name:"IDENTIFICATIE", start:9, end:13 },
+    { name:"INDIEN GEEN EUR", start:14, end:15 },
+  ];
+  const leftEdgeCols = [1, 4, 9, 14];
+  const rightEdgeCols = [3, 8, 13, 15];
+
+  for (let c=1; c<=15; c++){
+    const cell = ws.getCell(2, c);
+    const group = groups.find(g => c >= g.start && c <= g.end);
+    if (group){
+      if (c === group.start) cell.value = group.name;
+      cell.font = { name:"Aptos Narrow", size:14, bold:true };
+      cell.alignment = { horizontal:"centerContinuous", vertical:"middle" };
+      cell.fill = { type:"pattern", pattern:"solid", fgColor:{ argb:"FFB4E5A2" } };
+    }
+    cell.border = {
+      top: { style:"medium" },
+      left: leftEdgeCols.includes(c) ? { style:"medium" } : undefined,
+      right: rightEdgeCols.includes(c) ? { style:"medium" } : undefined,
+      bottom: (c===1 || c===2 || c===3) ? { style:"medium" } : undefined,
+    };
+  }
   ws.getRow(2).height = 31.5;
 
-  ws.getCell(3, 1).font = { name:"Aptos Narrow", size:11, bold:false };
-  ws.getCell(3, 1).border = { bottom:{ style:"thin" } };
-  for (let i=1;i<=14;i++){
-    const cell = ws.getCell(3, i+1);
-    cell.value = headers[i];
-    cell.font = { name:"Aptos Narrow", size:11, bold:true };
-    cell.border = { bottom:{ style:"thin" } };
+  for (let c=1; c<=15; c++){
+    const cell = ws.getCell(3, c);
+    if (c > 1) cell.value = headers[c-1];
+    cell.font = { name:"Aptos Narrow", size:11, bold: c > 1 };
+    cell.border = {
+      bottom: { style:"thin" },
+      left: c===1 ? { style:"medium" } : { style:"thin" },
+      right: c===15 ? undefined : { style:"thin" },
+    };
   }
 
+  const lastRow = 3 + rows.length;
   const displayRows = [];
   rows.forEach((r, idx) => {
     const rn = 4 + idx;
+    const isLastRow = rn === lastRow;
     const tagged = applyTagToName(r.voornaam, r.achternaam, r.tag);
     const values = {
       1: idx+1,
@@ -832,7 +858,12 @@ async function exportExcel(){
       const cc = ws.getCell(rn, c);
       cc.value = values[c] === undefined ? null : values[c];
       cc.font = { name:"Aptos Narrow", size:11, bold: c===1 };
-      cc.border = { bottom:{ style:"thin" } };
+      cc.border = {
+        top: { style:"thin" },
+        bottom: isLastRow ? (c===1 ? { style:"medium" } : undefined) : { style:"thin" },
+        left: c===1 ? { style:"medium" } : { style:"thin" },
+        right: c===15 ? undefined : { style:"thin" },
+      };
       if (c>=5 && c<=7) cc.alignment = { horizontal:"center" };
       else if (c!==1) cc.alignment = { horizontal:"left" };
       if (c===4) cc.numFmt = "dd-mm-yyyy";
