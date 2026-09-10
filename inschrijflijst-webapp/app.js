@@ -413,7 +413,7 @@ function sortedCompose(){
 
 function renderCompose(){
   renderStats();
-  const rows = sortedCompose();
+  const rows = composeList; // entry order on screen — the export sorts alphabetically instead
   const tbody = $("composeTbody");
   $("composeEmpty").hidden = rows.length !== 0;
   tbody.innerHTML = rows.map((r, idx) => {
