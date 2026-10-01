@@ -175,20 +175,21 @@ function computeAlerts(){
     expired: workers.filter(w => expiryStatus(w) === "expired").sort(byExpiry),
     soon: workers.filter(w => expiryStatus(w) === "soon").sort(byExpiry),
     missingBsn: workers.filter(w => !w.bsn || !String(w.bsn).trim()).sort(byName),
+    missingBirth: workers.filter(w => !w.geboortedatum).sort(byName),
   };
 }
 
 function updateAlertsButton(){
-  const { expired, soon, missingBsn } = computeAlerts();
-  const total = expired.length + soon.length + missingBsn.length;
+  const { expired, soon, missingBsn, missingBirth } = computeAlerts();
+  const total = expired.length + soon.length + missingBsn.length + missingBirth.length;
   const badge = $("alertsBadge");
   badge.textContent = total;
-  badge.className = "badge " + (expired.length ? "expired" : (soon.length || missingBsn.length ? "soon" : "none"));
+  badge.className = "badge " + (expired.length ? "expired" : (soon.length || missingBsn.length || missingBirth.length ? "soon" : "none"));
 }
 
 function openAlertsModal(){
-  const { expired, soon, missingBsn } = computeAlerts();
-  if (!expired.length && !soon.length && !missingBsn.length){
+  const { expired, soon, missingBsn, missingBirth } = computeAlerts();
+  if (!expired.length && !soon.length && !missingBsn.length && !missingBirth.length){
     toast("ما في أي تنبيهات حالياً — كلشي تمام.");
     return;
   }
@@ -204,10 +205,11 @@ function openAlertsModal(){
   backdrop.className = "modal-backdrop";
   backdrop.innerHTML = "<div class=\"modal\">" +
     "<h3>التنبيهات</h3>" +
-    "<p class=\"sub\" style=\"margin:0 0 4px;\">هويات منتهية أو قاربت الانتهاء، وعمّال بدون رقم BSN.</p>" +
+    "<p class=\"sub\" style=\"margin:0 0 4px;\">هويات منتهية أو قاربت الانتهاء، وعمّال بدون رقم BSN أو بدون تاريخ ميلاد.</p>" +
     section("هويات منتهية", "alert-danger", expired, w => "منتهية منذ " + Math.abs(daysUntil(w.geldig_tot)) + " يوم (كانت سارية حتى " + fmtDateDisplay(w.geldig_tot) + ")") +
     section("هويات قاربت الانتهاء (خلال 30 يوم)", "alert-warn", soon, w => "متبقٍ " + daysUntil(w.geldig_tot) + " يوم (حتى " + fmtDateDisplay(w.geldig_tot) + ")") +
     section("بدون رقم BSN", "alert-warn", missingBsn) +
+    section("بدون تاريخ ميلاد", "alert-warn", missingBirth) +
     "<div class=\"btnrow\"><button type=\"button\" class=\"btn btn-ghost\" id=\"btnCloseAlerts\">إغلاق</button></div>" +
   "</div>";
   document.body.appendChild(backdrop);
