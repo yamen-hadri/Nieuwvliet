@@ -246,6 +246,7 @@ function renderWorkersTable(){
     const name = fullName(w);
     return "<tr class=\"" + rowCls + "\">" +
       "<td class=\"ltr name-cell truncate col-name\" title=\"" + escapeHtml(name) + "\">" + escapeHtml(name) + "</td>" +
+      "<td class=\"mono\">" + escapeHtml(fmtDateDisplay(w.geboortedatum)) + "</td>" +
       "<td class=\"ltr truncate col-nat\" title=\"" + escapeHtml(nat) + "\">" + escapeHtml(nat) + "</td>" +
       "<td class=\"ltr truncate col-type\" title=\"" + escapeHtml(type) + "\">" + escapeHtml(type) + "</td>" +
       "<td class=\"mono truncate col-doc\" title=\"" + escapeHtml(doc) + "\">" + escapeHtml(doc) + "</td>" +

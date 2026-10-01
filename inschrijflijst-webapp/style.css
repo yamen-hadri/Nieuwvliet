@@ -149,11 +149,11 @@ td.name-cell{font-weight:600;}
 .row-actions{display:flex; gap:5px;}
 
 .truncate{overflow:hidden; text-overflow:ellipsis;}
-.col-name{max-width:170px;}
-.col-nat{max-width:100px;}
-.col-type{max-width:130px;}
-.col-doc{max-width:100px;}
-.col-bsn{max-width:90px;}
+.col-name{max-width:150px;}
+.col-nat{max-width:90px;}
+.col-type{max-width:110px;}
+.col-doc{max-width:90px;}
+.col-bsn{max-width:80px;}
 
 .status-dot{display:inline-block; width:7px; height:7px; border-radius:50%; margin-inline-start:5px; vertical-align:middle;}
 .status-dot.expired{background:var(--danger);}
