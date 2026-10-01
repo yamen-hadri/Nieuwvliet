@@ -272,6 +272,7 @@ function openWorkerForm(worker){
   $("fTypeLegitimatie").value = worker ? worker.type_legitimatie || "" : "";
   $("fDocumentnummer").value = worker ? worker.documentnummer || "" : "";
   $("fBsn").value = worker ? worker.bsn || "" : "";
+  $("fGeboortedatum").value = worker ? worker.geboortedatum || "" : "";
   $("fGeldigVan").value = worker ? worker.geldig_van || "" : "";
   $("fGeldigTot").value = worker ? worker.geldig_tot || "" : "";
   $("fKopieId").value = worker ? (worker.kopie_id || "ja") : "ja";
@@ -298,6 +299,7 @@ async function saveWorkerForm(){
     type_legitimatie: $("fTypeLegitimatie").value.trim(),
     documentnummer: $("fDocumentnummer").value.trim(),
     bsn: $("fBsn").value.trim(),
+    geboortedatum: $("fGeboortedatum").value || null,
     geldig_van: $("fGeldigVan").value || null,
     geldig_tot: $("fGeldigTot").value || null,
     kopie_id: $("fKopieId").value,
@@ -391,7 +393,7 @@ function addWorkerToCompose(workerId){
     voornaam: w.voornaam, achternaam: w.achternaam,
     nationaliteit: w.nationaliteit, type_legitimatie: w.type_legitimatie,
     documentnummer: w.documentnummer, geldig_van: w.geldig_van, geldig_tot: w.geldig_tot,
-    bsn: w.bsn, kopie_id: w.kopie_id, twv_kopie: w.twv_kopie,
+    bsn: w.bsn, geboortedatum: w.geboortedatum, kopie_id: w.kopie_id, twv_kopie: w.twv_kopie,
     tag: currentTag(),
     starttijd: $("defStart").value || "",
     pauze: $("defPause").value || "",
@@ -446,6 +448,7 @@ const IMPORT_TARGET_FIELDS = [
   { key: "type_legitimatie", label: "Type Legitimatie" },
   { key: "documentnummer", label: "Documentnummer" },
   { key: "bsn", label: "BSN-nummer" },
+  { key: "geboortedatum", label: "Geboortedatum" },
   { key: "geldig_van", label: "Geldig van" },
   { key: "geldig_tot", label: "Geldig tot" },
   { key: "geldig_range", label: "— أو: عمود واحد فيه المدة كاملة (من تاريخ - إلى تاريخ) —" },
@@ -460,6 +463,7 @@ const IMPORT_GUESS_PATTERNS = {
   type_legitimatie: /legitimatie|type.?id/i,
   documentnummer: /document|paspoort.?(nr|nummer)|id.?(nr|nummer)/i,
   bsn: /bsn/i,
+  geboortedatum: /geboorte|birth|dob/i,
   geldig_van: /geldig.*van|start|begin/i,
   geldig_tot: /geldig.*tot|verval|expir/i,
   geldig_range: /^geldig(heid)?$|verblijf|iqama|residency/i,
@@ -635,6 +639,8 @@ function buildImportRow(vals, mapping){
   if (!voornaam && !achternaam) return null;
   if (!voornaam && achternaam){ voornaam = achternaam; achternaam = ""; }
 
+  const geboortedatum = importToISODate(importGet(vals, mapping, "geboortedatum"));
+
   const rawVan = importGet(vals, mapping, "geldig_van");
   const rawTot = importGet(vals, mapping, "geldig_tot");
   const rawRange = mapping.geldig_range >= 0 ? importGet(vals, mapping, "geldig_range") : "";
@@ -655,6 +661,7 @@ function buildImportRow(vals, mapping){
     type_legitimatie: importGet(vals, mapping, "type_legitimatie"),
     documentnummer: importGet(vals, mapping, "documentnummer"),
     bsn: importGet(vals, mapping, "bsn"),
+    geboortedatum,
     geldig_van, geldig_tot,
     kopie_id: importToJaNee(importGet(vals, mapping, "kopie_id"), false),
     twv_kopie: importToJaNee(importGet(vals, mapping, "twv_kopie"), true),
@@ -742,6 +749,11 @@ function parseISODateParts(iso){
   const p = (iso||"").split("-");
   return { y: +p[0], m: +p[1], d: +p[2] };
 }
+function isoToUTCDate(iso){
+  if (!iso) return null;
+  const p = parseISODateParts(iso);
+  return new Date(Date.UTC(p.y, p.m-1, p.d));
+}
 function timeToDate(hhmm){
   const p = (hhmm||"00:00").split(":");
   return new Date(Date.UTC(1970,0,1, +p[0]||0, +p[1]||0, 0));
@@ -767,7 +779,6 @@ async function exportExcel(){
   }
 
   const rows = sortedCompose();
-  const dp = parseISODateParts(dateVal);
   const dateDisplay = fmtDateDisplay(dateVal);
 
   const headers = [null,"Voornaam","Achternaam","Datum","Starttijd","Pauze","Eindtijd","Handtekening",
@@ -830,7 +841,7 @@ async function exportExcel(){
       1: idx+1,
       2: tagged.voornaam,
       3: tagged.achternaam,
-      4: new Date(Date.UTC(dp.y, dp.m-1, dp.d)),
+      4: isoToUTCDate(r.geboortedatum),
       5: r.starttijd ? timeToDate(r.starttijd) : null,
       6: r.pauze ? timeToDate(r.pauze) : null,
       7: r.eindtijd ? timeToDate(r.eindtijd) : null,
@@ -843,7 +854,7 @@ async function exportExcel(){
       14: labelJaNee(r.kopie_id),
       15: labelJaNeeNvt(r.twv_kopie),
     };
-    const display = [idx+1, tagged.voornaam, tagged.achternaam, dateDisplay, r.starttijd, r.pauze, r.eindtijd,
+    const display = [idx+1, tagged.voornaam, tagged.achternaam, fmtDateDisplay(r.geboortedatum), r.starttijd, r.pauze, r.eindtijd,
                      "", r.nationaliteit||"", r.type_legitimatie||"", r.documentnummer||"",
                      geldigRangeText(r.geldig_van,r.geldig_tot), r.bsn||"", labelJaNee(r.kopie_id), labelJaNeeNvt(r.twv_kopie)];
     displayRows.push(display);

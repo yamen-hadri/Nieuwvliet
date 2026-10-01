@@ -153,6 +153,10 @@
             <input type="text" id="fBsn" class="mono ltr">
           </div>
           <div class="field">
+            <label for="fGeboortedatum">Geboortedatum</label>
+            <input type="date" id="fGeboortedatum" class="ltr">
+          </div>
+          <div class="field">
             <label for="fGeldigVan">Geldig van</label>
             <input type="date" id="fGeldigVan" class="ltr">
           </div>
@@ -202,7 +206,7 @@
 
       <div class="defaults-row">
         <div class="field">
-          <label for="expDate">تاريخ النزلة (Datum)</label>
+          <label for="expDate">تاريخ النزلة <span style="font-weight:400;">(لاسم الملف فقط)</span></label>
           <input type="date" id="expDate" class="ltr">
         </div>
         <div class="field">
@@ -218,7 +222,8 @@
           <input type="time" id="defEnd" class="ltr">
         </div>
       </div>
-      <p class="search-hint" style="margin:-6px 0 14px;">اتركها فاضية إذا بدك تصدّر الجدول بأوقات فاضية (Starttijd/Pauze/Eindtijd) تُعبّى يدوياً لاحقاً.</p>
+      <p class="search-hint" style="margin:-6px 0 4px;">اتركها فاضية إذا بدك تصدّر الجدول بأوقات فاضية (Starttijd/Pauze/Eindtijd) تُعبّى يدوياً لاحقاً.</p>
+      <p class="search-hint" style="margin:0 0 14px;">عمود Datum بالملف المصدَّر صار يعرض تاريخ ميلاد كل عامل، مش تاريخ النزلة.</p>
 
       <div class="compose-columns">
         <div class="search-box">

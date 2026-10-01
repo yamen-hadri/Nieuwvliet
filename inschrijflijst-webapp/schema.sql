@@ -14,6 +14,7 @@ create table if not exists workers (
   type_legitimatie text not null default '',
   documentnummer text not null default '',
   bsn text not null default '',
+  geboortedatum date,
   geldig_van date,
   geldig_tot date,
   kopie_id text not null default 'ja',
@@ -27,6 +28,10 @@ create index if not exists workers_achternaam_idx on workers (achternaam);
 -- (آمن تشغّله أكتر من مرة، ما بيأثر عالبيانات الموجودة):
 alter table workers alter column achternaam drop not null;
 alter table workers alter column achternaam set default '';
+
+-- إذا كنت شغّلت هالملف قبل ما تنضاف خانة تاريخ الميلاد، هالسطر بيضيفها
+-- (آمن تشغّله أكتر من مرة):
+alter table workers add column if not exists geboortedatum date;
 
 -- ============================================================
 -- الأمان: بس المستخدمين المسجلين (اللي عملتلهم حساب إنت) يقدروا
